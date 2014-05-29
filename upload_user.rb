@@ -1,6 +1,11 @@
 require 'flickraw'
 require 'optparse'
 require "yaml"
+require 'term/ansicolor'
+
+require_relative 'User'
+
+include Term::ANSIColor
 
 @options = {}
 
@@ -31,65 +36,86 @@ end
 
 opt_parse.parse!
 
-@user_keys = YAML::load(File.open("user.yml"))
-
-unless @options[:user]
-  puts "Flickr UserName is needed:"
-  @options[:user] = gets.chomp
-end
-
-unless @options[:api_key]
-  if @user_keys[@options[:user]][:api_key]
-    @options[:api_key] = @user_keys[@options[:user]][:api_key]
+def set_user
+  if @options[:user]
+    @user = User.new(@options[:user])
   else
-    puts "Flickr API KEY is needed:"
-    @options[:api_key] = gets.chomp
+    puts "Flickr UserName is needed:"
+    @user = User.new(gets.chomp)
   end
 end
 
-unless @options[:shared_secret]
-  if @user_keys[@options[:user]][:shared_secret]
-    @options[:shared_secret] = @user_keys[@options[:user]][:shared_secret]
+def input_key_secrets(type, text)
+  if @options[type]
+    @options[type]
   else
-    puts "Flickr SHARED SECRET is needed:"
-    @options[:shared_secret] = gets.chomp
+    puts text
+    gets.chomp
   end
 end
 
-unless @options[:permit]
-  puts "Wanted rights are needed: read, write, delete"
-  @options[:permit] = gets.chomp
+def set_api_credentials
+  api_key = input_key_secrets(:api_key, "Flickr API KEY is needed:")
+  shared_secret = input_key_secrets(:shared_secret, "Flickr SHARED SECRET is needed:")
+  permit = input_key_secrets(:permit, "Wanted rights are needed: read, write, delete")
+
+  @user.save_api_credentials(api_key, shared_secret, permit)
 end
 
-FlickRaw.api_key = @options[:api_key]
-FlickRaw.shared_secret = @options[:shared_secret]
+def set_access_credentials(permit)
+  begin
+    FlickRaw.api_key = @user.api_key
+    FlickRaw.shared_secret = @user.shared_secret
 
-token = flickr.get_request_token
-auth_url = flickr.get_authorize_url(token['oauth_token'], :perms => @options[:permit])
+    token = flickr.get_request_token
+    auth_url = flickr.get_authorize_url(token['oauth_token'], :perms => permit)
+  rescue => e
+    print red, "FAILED to connect to API with these credentials. Please check them!\n", reset
+    puts "API KEY: #{@user.api_key}"
+    puts "SHARED SECRET: #{@user.shared_secret}"
+    set_api_credentials
+  end
 
-puts "Open this url in your process to complete the authication process:"
-puts "#{auth_url}"
-puts "Copy here the number given when you complete the process."
-verify = gets.strip
+  puts "Open this url in your process to complete the authentication process:"
+  puts "#{auth_url}"
+  puts "Copy here the number given when you complete the process."
+  verify = gets.strip
 
-begin
-  flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
-  login = flickr.test.login
-  puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
-rescue FlickRaw::FailedResponse => e
-  puts "Authentication failed : #{e.msg}"
+  begin
+    flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
+    login = flickr.test.login
+    puts "You are now authenticated as #{login.username} and have the right to #{permit} on/to Flickr."
+  rescue FlickRaw::FailedResponse => e
+    print red, "Authentication failed : #{e.msg}\n", reset
+  end
+
+  @user.save_access_credentials(flickr.access_token, access_secret, permit)
 end
 
-begin
-  @user_keys[login.username]['api_key'] = @options[:api_key]
-  @user_keys[login.username]['shared_secret'] = @options[:shared_secret]
-  @user_keys[login.username]['access_token'] = flickr.access_token
-  @user_keys[login.username]['access_secret'] = flickr.access_secret
-  File.open('user.yml', 'w') { |f| f.write @user_keys.to_yaml }
-  puts "Data is written to file"
-rescue => e
-  puts "FAILED to write to config file"
-  puts "\t#{e.message}"
-  exit
+
+def create_update_user
+  set_user
+  if @user.api_key && @user.shared_secret
+    puts "Do you want to change your permissions? [y/n]"
+    current = @user.permission ? @user.permission : 'n/a'
+    puts "Your permission is currently: #{current}"
+    case gets[0].downcase
+      when 'y'
+        permit = input_key_secrets(:permit, "Wanted rights are needed: read, write, delete")
+        set_access_credentials(permit)
+      else
+        if @user.permission
+          set_access_credentials(@user.permission)
+        else
+          puts "Permissions are needed!"
+          permit = input_key_secrets(:permit, "Wanted rights are needed: read, write, delete")
+          set_access_credentials(permit)
+        end
+    end
+  else
+    set_api_credentials
+    set_access_credentials(@user.permission)
+  end
 end
 
+create_update_user
