@@ -10,10 +10,10 @@ class User
   attr_accessor :name, :api_key, :shared_secret, :access_token, :access_secret, :permission
 
   def initialize(user_name)
-    user_keys = YAML::load(File.open("user.yml"))
+    user_keys = YAML::load(File.open("user.yml", "a+")) || {}
     @name = user_name
     if user_keys[@name].nil?
-      print red, bold "Unknown user!\n", reset
+      print red, bold, "Unknown user!\n", reset
       puts "Do you want to create a new user? [y/n]"
       unless gets[0].downcase == 'y'
         exit
@@ -29,7 +29,7 @@ class User
   end
 
   def save_api_credentials(key, secret, permission=nil)
-    user_keys = YAML::load(File.open("user.yml"))
+    user_keys = YAML::load(File.open("user.yml", "a+")) || {}
     puts user_keys
     user_keys[@name] = {}
 
@@ -40,7 +40,7 @@ class User
     puts user_keys
 
     begin
-      File.open('user.yml', 'w') { |f| f.write user_keys.to_yaml }
+      File.open('user.yml', 'a+') { |f| f.write user_keys.to_yaml }
       print blue, "Done saving #{type}-key/secret to user.yml.\n", reset
     rescue => e
       print red, "FAILED to save API credentials to user.yml.\n"
@@ -67,7 +67,7 @@ class User
   def complete?
     complete = self && self.name && self.api_key && self.shared_secret && self.access_token && self.access_secret
     unless complete
-      print red, bold "Incomplete User!\n", reset
+      print red, bold, "Incomplete User!\n", reset
       puts "\tPlease run 'ruby upload_user.rb' and follow the steps!"
     end
     complete

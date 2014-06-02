@@ -3,7 +3,7 @@ require 'optparse'
 require "yaml"
 require 'term/ansicolor'
 
-require_relative 'User'
+require_relative 'user.rb'
 
 include Term::ANSIColor
 
@@ -40,7 +40,7 @@ def set_user
   if @options[:user]
     @user = User.new(@options[:user])
   else
-    puts "Flickr UserName is needed:"
+    print "Flickr UserName is needed: "
     @user = User.new(gets.chomp)
   end
 end
@@ -89,7 +89,7 @@ def set_access_credentials(permit)
     print red, "Authentication failed : #{e.msg}\n", reset
   end
 
-  @user.save_access_credentials(flickr.access_token, access_secret, permit)
+  @user.save_access_credentials(flickr.access_token, flickr.access_secret, permit)
 end
 
 

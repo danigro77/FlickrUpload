@@ -3,15 +3,15 @@ require 'optparse'
 require "yaml"
 require 'term/ansicolor'
 
-require_relative 'User'
-require_relative 'Upload'
-require_relative 'Image'
-require_relative 'Album'
+require_relative 'user.rb'
+require_relative 'upload.rb'
+require_relative 'image.rb'
+require_relative 'album.rb'
 
 include Term::ANSIColor
 
 IMAGE_TYPES = %w(jpeg JPEG jpg JPG png PNG gif GIF tiff TIFF mpeg MPEG mp4 MP4 avi AVI wmv WMV mov MOV mpg MPG mp1 MP1 mp2 MP2 mpv MPV 3gp 3GP m2ts M2TS ogg OGG ogv OGV )
-IMAGE_MATCHER = /\.(jpe?g|gif|png|tiff|mpe?g|mp4|avi|wmv|mov|mp1|mp2|mpv|3gp|m2ts|ogg|ogv)$/
+IMAGE_MATCHER = /\.(jpe?g|gif|png|tiff|mpe?g|mp4|avi|wmv|mov|mp1|mp2|mpv|3gp|m2ts|ogg|ogv)$/i
 
 @options = {}
 
@@ -24,6 +24,10 @@ opt_parse = OptionParser.new do |opts|
 
   opts.on('-p', '--path PATH', 'Set source path') do |p|
     @options[:path] = p
+  end
+
+  opts.on('-m', '--mode MODE', 'Set upload mode') do |m|
+    @options[:mode] = m
   end
 
   opts.on( '-h', '--help', 'Display this screen' ) do
@@ -70,21 +74,26 @@ def set_user
 end
 
 def set_upload_behavior
-  puts "-------------------------------------------------"
-  print bold, "What should the program do, if finds \n"
-  print "\ta new album with the same name as \n"
-  print red, "\tan existing album?\n", reset
-  puts "Create a new one with the same name? [n]"
-  puts "Skip this upload and remember directory in log? [s]"
-  puts "Use existing one and add all images to the set? [a]"
-  puts "Exit the program? [any other key]"
-  input = gets[0].downcase
-  puts "-------------------------------------------------"
+  if @options[:mode]
+    input = @options[:mode]
+  else
+    puts "-------------------------------------------------"
+    print bold, "What should the program do, if finds \n"
+    print "\ta new album with the same name as \n"
+    print red, "\tan existing album?\n", reset
+    puts "Create a new one with the same name? [n]"
+    puts "Skip this upload and remember directory in log? [s]"
+    puts "Use existing one and add all images to the set? [a]"
+    puts "Exit the program? [any other key]"
+    input = gets[0].downcase
+    puts "-------------------------------------------------"
+  end
   case input
     when 'n' then @upload.behavior =  :new_album
     when 's' then @upload.behavior =  :skip_album
     when 'a' then @upload.behavior =  :add_to_album
     else
+      puts "Unknown behavior, you entered: " + input + ", exiting ..."
       exit
   end
 end
@@ -198,6 +207,7 @@ def start_program
   @upload = Upload.new(source_path)
 
   @sub_directories =  Dir.glob(@upload.source_path + "**/")
+
   set_upload_behavior
 
   @upload.existing_albums = get_user_albums
@@ -207,7 +217,7 @@ def start_upload_to_flickr
   start_program
 
   @sub_directories.each do |path|
-    # @path = path
+    @path = path
     @album = Album.new
     get_album_name(path)
     images = []
