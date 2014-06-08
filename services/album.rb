@@ -1,11 +1,11 @@
 
 class Album
-  attr_accessor :id, :name, :description
+  attr_accessor :name, :description, :flickr_id
 
   def initialize
-    @id = nil
     @name = nil
     @description = nil
+    @flickr_id = nil
   end
 
 end

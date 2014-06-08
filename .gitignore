@@ -1,2 +1,4 @@
 test_dir_*
 user.yml
+.idea/
+.idea/*
