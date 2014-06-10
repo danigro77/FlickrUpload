@@ -1,4 +1,3 @@
-
 class Image
 
   attr_accessor :full_path, :id, :title, :description, :public, :family, :friend

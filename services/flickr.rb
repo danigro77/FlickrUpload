@@ -3,6 +3,7 @@ require 'term/ansicolor'
 require_relative 'user.rb'
 require_relative 'image.rb'
 require_relative 'album.rb'
+require_relative 'download_photo.rb'
 
 class Flickr
 
@@ -120,8 +121,44 @@ class Flickr
     end
   end
 
+  def self.get_photos_in_album(download)
+    photos = []
+    begin
+      album = flickr.photosets.getPhotos(:photoset_id => download.album_id)
+      album['photo'].each do |img|
+        photos << img['id']
+      end
+    rescue => e
+      error_message("FAILED to get the photos of the album #{download.source_directory}.", e.message)
+    end
+    photos
+  end
+
+  def self.get_photo_url(image, size)
+    begin
+      image_in_all_sizes = flickr.photos.getSizes(:photo_id => image.flickr_id)
+      image_in_all_sizes.each do |image_in_one_size|
+        if size == image_in_one_size['label']
+          image.size = image_in_one_size['label']
+          image.source = image_in_one_size['source']
+          # image.title = image.get_title_from_source
+        end
+      end
+      image
+    rescue => e
+      error_message("FAILED to get the URL for image with the Flickr ID #{image.flickr_id}.", e.message)
+      nil
+    end
+  end
+
   def self.error_message(text, msg)
     print red, "#{text}.\n"
     print "\t#{msg}\n", reset
+  end
+
+  # FOR DEBUG
+
+  def self.get_album(id)
+    p flickr.photosets.getInfo(:photoset_id => id)
   end
 end
