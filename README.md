@@ -11,7 +11,7 @@ ruby create_flickr_user.rb [options]
 ```
 
 ```
-ruby upload_to_flickr.rb [options]
+ruby download_flickr_images.rb [options]
     -u, --user USER                  Input your Flickr user name
     -t, --target TARGET              Input the full path to target directory
     -s, --source S1,S2,S3            Input the directories you want to download. Example: -s bla_1,'bla 2' 

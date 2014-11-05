@@ -16,7 +16,7 @@ include Term::ANSIColor
 @options = {}
 
 opt_parse = OptionParser.new do |opts|
-  opts.banner = "Usage: upload_to_flickr.rb [options]"
+  opts.banner = "Usage: download_flickr_images.rb [options]"
 
   opts.on('-u', '--user USER', 'Input your Flickr user name') do |u|
     @options[:user] = u
